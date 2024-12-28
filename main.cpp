@@ -19,7 +19,7 @@ int main(int argc, char *argv[]) {
     if (rank == TRACKER_RANK) {
         tracker(numtasks, rank);
     } else {
-        peer(numtasks, rank);
+        Peer(numtasks, rank);
     }
 
     MPI_Finalize();

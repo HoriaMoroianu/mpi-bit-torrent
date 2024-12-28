@@ -6,10 +6,15 @@
 #include <mpi.h>
 #include <pthread.h>
 #include <iostream>
+#include <fstream>
+#include <vector>
 
 using namespace std;
 
-void peer(int numtasks, int rank);
+void Peer(int numtasks, int rank);
+void ReadInput(int rank, vector<pair<string, vector<string>>> &files,
+               vector<string> &wanted_filenames);
+
 void *download_thread_func(void *arg);
 void *upload_thread_func(void *arg);
 
