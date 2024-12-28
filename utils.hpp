@@ -8,7 +8,7 @@
 #define TRACKER_RANK 0
 #define MAX_FILES 10
 #define MAX_FILENAME 15
-#define HASH_SIZE 32
+#define HASH_SIZE 33
 #define MAX_CHUNKS 100
 
 #define DIE(assertion, call_description)            \

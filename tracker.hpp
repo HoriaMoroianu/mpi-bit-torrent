@@ -6,9 +6,12 @@
 #include <mpi.h>
 #include <pthread.h>
 #include <iostream>
+#include <unordered_map>
 
 using namespace std;
 
-void tracker(int numtasks, int rank);
+extern MPI_Datatype MPI_FILE_DATA;
+
+void Tracker(int numtasks, int rank);
 
 #endif

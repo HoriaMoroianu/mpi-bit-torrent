@@ -17,7 +17,7 @@ $(TARGET): $(OBJS)
 	$(CXX) $(CXXFLAGS) -c $< -o $@
 
 run: $(TARGET)
-	mpirun -np 3 ./$(TARGET)
+	mpirun -np 4 ./$(TARGET)
 
 clean:
 	rm -f $(TARGET) $(OBJS)

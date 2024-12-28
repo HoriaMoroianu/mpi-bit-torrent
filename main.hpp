@@ -9,4 +9,6 @@
 
 using namespace std;
 
+MPI_Datatype MPI_FILE_DATA;
+
 #endif
