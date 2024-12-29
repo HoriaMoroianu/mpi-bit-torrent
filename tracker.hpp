@@ -19,16 +19,19 @@ enum ClientType{
 };
 
 struct TrackerData {
-    string filename;
+    FileData file;
     vector<int> swarm;
     vector<ClientType> client_types;
-    vector<string> segments;
 };
 
 extern MPI_Datatype MPI_FILE_DATA;
+extern MPI_Datatype MPI_SWARM_DATA;
 
 void Tracker(int numtasks, int rank);
 void RecvClientFiles(int numtasks, unordered_map<string, TrackerData> &database);
+void FileRequest(unordered_map<string, TrackerData> &database, int source);
+void FileComplete(unordered_map<string, TrackerData> &database, int source);
+
 void PrintDatabase(unordered_map<string, TrackerData> &database);
 
 #endif

@@ -7,8 +7,16 @@ void Client(int numtasks, int rank)
     // List of pairs (filename, list of segments)
     vector<pair<string, vector<string>>> owned_files;
     vector<string> wanted_filenames;    // filenames to download
+
     ReadInput(rank, owned_files, wanted_filenames);
     SendFilesToTracker(owned_files);
+
+    bool ack = false;
+    do {
+        MPI_Bcast(&ack, 1, MPI_C_BOOL, TRACKER_RANK, MPI_COMM_WORLD);
+    } while (!ack);
+
+    cout << "Client " << rank << " started\n";
 
     pthread_t download_thread;
     pthread_t upload_thread;
