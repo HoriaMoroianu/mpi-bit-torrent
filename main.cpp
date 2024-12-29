@@ -31,7 +31,7 @@ int main(int argc, char *argv[]) {
     if (rank == TRACKER_RANK) {
         Tracker(numtasks, rank);
     } else {
-        Peer(numtasks, rank);
+        Client(numtasks, rank);
     }
 
     MPI_Type_free(&MPI_FILE_DATA);

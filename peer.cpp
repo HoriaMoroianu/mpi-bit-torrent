@@ -2,12 +2,13 @@
 
 #include "peer.hpp"
 
-void Peer(int numtasks, int rank)
+void Client(int numtasks, int rank)
 {
-    vector<pair<string, vector<string>>> files; // (filename, list of segments)
-    vector<string> wanted_filenames;            // filenames to download
-    ReadInput(rank, files, wanted_filenames);
-    SendFilesToTracker(files);
+    // List of pairs (filename, list of segments)
+    vector<pair<string, vector<string>>> owned_files;
+    vector<string> wanted_filenames;    // filenames to download
+    ReadInput(rank, owned_files, wanted_filenames);
+    SendFilesToTracker(owned_files);
 
     pthread_t download_thread;
     pthread_t upload_thread;
@@ -67,8 +68,8 @@ void ReadInput(int rank, vector<pair<string, vector<string>>> &files,
 
 void SendFilesToTracker(vector<pair<string, vector<string>>> &files)
 {
-    vector<FileData> peer_data;
-    peer_data.reserve(files.size());
+    vector<FileData> client_data;
+    client_data.reserve(files.size());
 
     for (auto &[filename, segments] : files) {
         FileData file_data;
@@ -80,10 +81,10 @@ void SendFilesToTracker(vector<pair<string, vector<string>>> &files)
             file_data.segments[i][segments[i].size()] = '\0';
         }
         file_data.segment_count = segments.size();
-        peer_data.push_back(file_data);
+        client_data.push_back(file_data);
     }
 
-    MPI_Send(peer_data.data(), peer_data.size(), MPI_FILE_DATA, TRACKER_RANK, 0, MPI_COMM_WORLD);
+    MPI_Send(client_data.data(), client_data.size(), MPI_FILE_DATA, TRACKER_RANK, 0, MPI_COMM_WORLD);
 }
 
 void *download_thread_func(void *arg)
