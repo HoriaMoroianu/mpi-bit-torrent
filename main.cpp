@@ -3,7 +3,7 @@
 #include "main.hpp"
 #include "utils.hpp"
 #include "tracker.hpp"
-#include "peer.hpp"
+#include "client.hpp"
 
 int main(int argc, char *argv[]) {
     int numtasks, rank;

@@ -1,7 +1,7 @@
 // Copyright (c) 2024 Horia-Valentin MOROIANU
 
 #include "tracker.hpp"
-#include "peer.hpp"
+#include "client.hpp"
 
 void Tracker(int numtasks, int rank)
 {

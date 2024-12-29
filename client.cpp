@@ -1,6 +1,6 @@
 // Copyright (c) 2024 Horia-Valentin MOROIANU
 
-#include "peer.hpp"
+#include "client.hpp"
 
 void Client(int numtasks, int rank)
 {

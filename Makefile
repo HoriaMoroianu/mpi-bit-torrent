@@ -4,7 +4,7 @@ CXXFLAGS = -Wall -Wextra -pthread
 
 TARGET = tema2
 
-SRCS = main.cpp peer.cpp tracker.cpp
+SRCS = main.cpp client.cpp tracker.cpp
 
 OBJS = $(SRCS:.cpp=.o)
 

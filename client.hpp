@@ -1,7 +1,7 @@
 // Copyright (c) 2024 Horia-Valentin MOROIANU
 
-#ifndef __PEER_HPP__
-#define __PEER_HPP__
+#ifndef __CLIENT_HPP__
+#define __CLIENT_HPP__
 
 #include "utils.hpp"
 #include <mpi.h>
