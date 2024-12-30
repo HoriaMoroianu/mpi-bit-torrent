@@ -9,17 +9,20 @@
 #include <iostream>
 #include <fstream>
 #include <vector>
+#include <queue>
+#include <unordered_set>
 
 using namespace std;
 
 extern MPI_Datatype MPI_FILE_DATA;
+extern MPI_Datatype MPI_SWARM_DATA;
 
 void Client(int numtasks, int rank);
 void ReadInput(int rank, vector<pair<string, vector<string>>> &files,
                vector<string> &wanted_filenames);
 void SendFilesToTracker(vector<pair<string, vector<string>>> &files);
 
-void *download_thread_func(void *arg);
-void *upload_thread_func(void *arg);
+void *DownloadThread(void *arg);
+void *UploadThread(void *arg);
 
 #endif

@@ -16,17 +16,15 @@ void Client(int numtasks, int rank)
         MPI_Bcast(&ack, 1, MPI_C_BOOL, TRACKER_RANK, MPI_COMM_WORLD);
     } while (!ack);
 
-    cout << "Client " << rank << " started\n";
-
     pthread_t download_thread;
     pthread_t upload_thread;
     void *status;
     int r;
 
-    r = pthread_create(&download_thread, NULL, download_thread_func, (void *) &rank);
+    r = pthread_create(&download_thread, NULL, DownloadThread, (void *) &rank);
     DIE(r, "Eroare la crearea thread-ului de download");
 
-    r = pthread_create(&upload_thread, NULL, upload_thread_func, (void *) &rank);
+    r = pthread_create(&upload_thread, NULL, UploadThread, (void *) &rank);
     DIE(r, "Eroare la crearea thread-ului de upload");
 
     r = pthread_join(download_thread, &status);
@@ -60,7 +58,6 @@ void ReadInput(int rank, vector<pair<string, vector<string>>> &files,
 
         for (int j = 0; j < segment_count; j++) {
             fin >> segments[j];
-            // TODO: check hash size?
         }
     }
 
@@ -95,14 +92,51 @@ void SendFilesToTracker(vector<pair<string, vector<string>>> &files)
     MPI_Send(client_data.data(), client_data.size(), MPI_FILE_DATA, TRACKER_RANK, 0, MPI_COMM_WORLD);
 }
 
-void *download_thread_func(void *arg)
+void *DownloadThread(void *arg)
 {
     int rank = *(int*) arg;
-    // cout << "Download thread " << rank << " started\n";
+    
+    // TODO: recv from args
+    // TODO: mutex + update realtime owned files
+
+    vector<string> wanted_filenames;
+
+    for (auto &filename : wanted_filenames) {
+        MPI_Send(filename.data(), filename.size(), MPI_CHAR, TRACKER_RANK, TAG_F_REQUEST, MPI_COMM_WORLD);
+
+        SwarmData swarm_data;
+        MPI_Recv(&swarm_data, 1, MPI_SWARM_DATA, TRACKER_RANK, TAG_F_REPLY, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
+
+        // For round robin
+        // TODO: compare function
+        priority_queue<pair<int, int>> swarm;
+        unordered_set<int> clients;
+        for (int i = 0; i < swarm_data.swarm_size; i++) {
+            swarm.push({ swarm_data.swarm[i], 0 });
+            clients.insert(swarm_data.swarm[i]);
+        }
+
+        for (int i = 0; i < swarm_data.file.segment_count; i++) {
+            auto &[source, req_count] = swarm.top();
+            swarm.pop();
+
+            // MPI_send(...);
+            // MPI_recv(...);
+
+            // if (ok) {
+            //     req_count++;
+            //     swarm.push({ source, req_count });
+            // } else {
+            //     swarm.push({ source, req_count });
+            //     retry;
+            // }
+        }
+    }
+
     return NULL;
 }
 
-void *upload_thread_func(void *arg)
+void *UploadThread(void *arg)
 {
     int rank = *(int*) arg;
     // cout << "Upload thread " << rank << " started\n";
