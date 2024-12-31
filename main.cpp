@@ -19,7 +19,7 @@ int main(int argc, char *argv[]) {
         MPI_Datatype types[3] = { MPI_CHAR, MPI_INT, MPI_CHAR };
         
         MPI_Aint displacements[3];
-        displacements[0] = offsetof(FileData, filename);
+        displacements[0] = offsetof(FileData, name);
         displacements[1] = offsetof(FileData, segment_count);
         displacements[2] = offsetof(FileData, segments);
 

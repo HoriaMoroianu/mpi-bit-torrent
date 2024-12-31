@@ -54,8 +54,8 @@ void ReadInput(int rank, unordered_map<string, FileData> &owned_files,
         FileData &file = owned_files[filename];
         file.segment_count = segment_count;
 
-        memset(file.filename, '\0', MAX_FILENAME);
-        strncpy(file.filename, filename.data(),
+        memset(file.name, '\0', MAX_FILENAME);
+        strncpy(file.name, filename.data(),
                 min(filename.size(), (size_t)MAX_FILENAME - 1));
 
         string hash;

@@ -26,7 +26,7 @@
     } while (0)
 
 struct FileData {
-    char filename[MAX_FILENAME];
+    char name[MAX_FILENAME];
     int segment_count;
     char segments[MAX_CHUNKS][HASH_SIZE];
 };

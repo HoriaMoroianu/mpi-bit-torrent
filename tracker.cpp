@@ -47,7 +47,7 @@ void RecvClientFiles(int numtasks, unordered_map<string, TrackerData> &database)
 
         // Save files in database
         for (auto &file : recv_files) {
-            TrackerData &data = database[file.filename];
+            TrackerData &data = database[file.name];
             data.swarm.push_back(i);
             data.client_types.push_back(ClientType::SEED);
 
@@ -96,7 +96,7 @@ void PrintDatabase(unordered_map<string, TrackerData> &database)
 {
     cout << "\nDatabase:\n";
     for (auto &[_, data] : database) {
-        cout << "File '" << data.file.filename << "' has:\n";
+        cout << "File '" << data.file.name << "' has:\n";
         cout << data.swarm.size() << " clients\n";
         cout << data.file.segment_count << " segments\n";
         for (int i = 0; i < data.swarm.size(); i++) {
