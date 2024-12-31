@@ -11,6 +11,7 @@
 #include <vector>
 #include <queue>
 #include <unordered_set>
+#include <unordered_map>
 
 using namespace std;
 
@@ -18,9 +19,9 @@ extern MPI_Datatype MPI_FILE_DATA;
 extern MPI_Datatype MPI_SWARM_DATA;
 
 void Client(int numtasks, int rank);
-void ReadInput(int rank, vector<pair<string, vector<string>>> &files,
+void ReadInput(int rank, unordered_map<string, FileData> &owned_files,
                vector<string> &wanted_filenames);
-void SendFilesToTracker(vector<pair<string, vector<string>>> &files);
+void SendFilesToTracker(unordered_map<string, FileData> &owned_files);
 
 void *DownloadThread(void *arg);
 void *UploadThread(void *arg);

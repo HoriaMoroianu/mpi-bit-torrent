@@ -102,6 +102,12 @@ void PrintDatabase(unordered_map<string, TrackerData> &database)
         for (int i = 0; i < data.swarm.size(); i++) {
             cout << "Client " << data.swarm[i] << " is a " << data.client_types[i] << '\n';
         }
+
+        cout << "Segments:\n";
+        for (int i = 0; i < data.file.segment_count; i++) {
+            cout << data.file.segments[i] << '\n';
+        }
+
         cout << '\n';
     }
 }

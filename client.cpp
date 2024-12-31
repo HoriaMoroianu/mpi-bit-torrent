@@ -4,9 +4,8 @@
 
 void Client(int numtasks, int rank)
 {
-    // List of pairs (filename, list of segments)
-    vector<pair<string, vector<string>>> owned_files;
-    vector<string> wanted_filenames;    // filenames to download
+    unordered_map<string, FileData> owned_files;
+    vector<string> wanted_filenames;
 
     ReadInput(rank, owned_files, wanted_filenames);
     SendFilesToTracker(owned_files);
@@ -34,7 +33,7 @@ void Client(int numtasks, int rank)
     DIE(r, "Eroare la asteptarea thread-ului de upload");
 }
 
-void ReadInput(int rank, vector<pair<string, vector<string>>> &files,
+void ReadInput(int rank, unordered_map<string, FileData> &owned_files,
                vector<string> &wanted_filenames)
 {
     // TODO: REMOVE WHEN USING THE CHECKER!
@@ -43,52 +42,48 @@ void ReadInput(int rank, vector<pair<string, vector<string>>> &files,
     DIE(!fin, "Eroare la deschiderea fisierului de input");
 
     // Read owned files data
-    int owned_files;
-    fin >> owned_files;
-    files.resize(owned_files);
+    int file_count;
+    fin >> file_count;
 
     string filename;
     int segment_count;
-    for (int i = 0; i < owned_files; i++) {
-        fin >> files[i].first;  // filename
+    for (int i = 0; i < file_count; i++) {
+        fin >> filename;
         fin >> segment_count;
 
-        vector<string> &segments = files[i].second;
-        segments.resize(segment_count);
+        FileData &file = owned_files[filename];
+        file.segment_count = segment_count;
 
+        memset(file.filename, '\0', MAX_FILENAME);
+        strncpy(file.filename, filename.data(),
+                min(filename.size(), (size_t)MAX_FILENAME - 1));
+
+        string hash;
         for (int j = 0; j < segment_count; j++) {
-            fin >> segments[j];
+            fin >> hash;
+            memset(file.segments[j], '\0', HASH_SIZE);
+            strncpy(file.segments[j], hash.data(),
+                    min(hash.size(), (size_t)HASH_SIZE - 1));
         }
     }
 
     // Read wanted files names
-    int wanted_files;
-    fin >> wanted_files;
-    wanted_filenames.resize(wanted_files);
+    fin >> file_count;
+    wanted_filenames.resize(file_count);
 
-    for (int i = 0; i < wanted_files; i++) {
+    for (int i = 0; i < file_count; i++) {
         fin >> wanted_filenames[i];
     }
 }
 
-void SendFilesToTracker(vector<pair<string, vector<string>>> &files)
+void SendFilesToTracker(unordered_map<string, FileData> &owned_files)
 {
     vector<FileData> client_data;
-    client_data.reserve(files.size());
+    client_data.reserve(owned_files.size());
 
-    for (auto &[filename, segments] : files) {
-        FileData file_data;
-        strncpy(file_data.filename, filename.data(), filename.size());
-        file_data.filename[filename.size()] = '\0';
-
-        for (int i = 0; i < segments.size(); i++) {
-            strncpy(file_data.segments[i], segments[i].data(), segments[i].size());
-            file_data.segments[i][segments[i].size()] = '\0';
-        }
-        file_data.segment_count = segments.size();
-        client_data.push_back(file_data);
+    for (auto &[_, file] : owned_files) {
+        client_data.push_back(file);
     }
-
     MPI_Send(client_data.data(), client_data.size(), MPI_FILE_DATA, TRACKER_RANK, 0, MPI_COMM_WORLD);
 }
 
