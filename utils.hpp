@@ -15,8 +15,9 @@
 #define TAG_F_REQUEST 1
 #define TAG_F_REPLY 2
 #define TAG_SWARM 3
-#define TAG_F_COMPLETE 4
-#define TAG_ALL_COMPLETE 5
+#define TAG_SEGMENT 4
+#define TAG_F_COMPLETE 5
+#define TAG_ALL_COMPLETE 6
 
 #define DIE(assertion, call_description)            \
     do {                                            \
@@ -32,10 +33,10 @@ struct FileData {
     char segments[MAX_CHUNKS][HASH_SIZE];
 };
 
-struct SwarmData {
-    FileData file;
-    int swarm_size;
-    int swarm[MAX_CLIENTS];
+struct DownloadSegment {
+    char filename[MAX_FILENAME];
+    int id;
+    char hash[HASH_SIZE];
 };
 
 #endif

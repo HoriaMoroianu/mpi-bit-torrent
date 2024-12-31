@@ -10,6 +10,6 @@
 using namespace std;
 
 MPI_Datatype MPI_FILE_DATA;
-MPI_Datatype MPI_SWARM_DATA;
+MPI_Datatype MPI_SEGMENT;
 
 #endif

@@ -25,7 +25,6 @@ struct TrackerData {
 };
 
 extern MPI_Datatype MPI_FILE_DATA;
-extern MPI_Datatype MPI_SWARM_DATA;
 
 void Tracker(int numtasks, int rank);
 void RecvClientFiles(int numtasks, unordered_map<string, TrackerData> &database);

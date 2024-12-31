@@ -107,21 +107,24 @@ void *DownloadThread(void *arg)
                 UpdateSwarm(local_swarm, filename);
             }
 
-            next_src = (next_src + 1) % local_swarm.size();
+            DownloadSegment segment;
+            do {
+                next_src = (next_src + 1) % local_swarm.size();
+                segment = RequestSegment(file.name, i, local_swarm[next_src]);
+            } while (strcmp(segment.filename, file.name));
 
-            // MPI_send(...);
-            // MPI_recv(...);
-
-            // if (ok) {
-            //     req_count++;
-            //     swarm.push({ source, req_count });
-            // } else {
-            //     swarm.push({ source, req_count });
-            //     retry;
-            // }
+            // TODO: MUTEX
+            FileData &owned_file = owned_files[filename];
+            if (strlen(owned_file.name) == 0) {
+                strcpy(owned_file.name, file.name);
+                owned_file.segment_count = file.segment_count;
+            }
+            strcpy(owned_file.segments[i], segment.hash);
+            // TODO: MUTEX
         }
+        // TODO: send f complete to tracker
     }
-
+    // TODO: send all complete to tracker
     return NULL;
 }
 
@@ -158,6 +161,19 @@ void UpdateSwarm(vector<int> &local_swarm, string &filename)
             local_swarm.push_back(client);
         }
     }
+}
+
+DownloadSegment RequestSegment(char *filename, int id, int peer)
+{
+    DownloadSegment segment;
+    memset(segment.filename, '\0', MAX_FILENAME);
+    memset(segment.hash, '\0', HASH_SIZE);
+    strcpy(segment.filename, filename);
+    segment.id = id;
+
+    MPI_Sendrecv_replace(&segment, 1, MPI_SEGMENT, peer, TAG_SEGMENT,
+                         peer, TAG_SEGMENT, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
+    return segment;
 }
 
 void *UploadThread(void *arg)

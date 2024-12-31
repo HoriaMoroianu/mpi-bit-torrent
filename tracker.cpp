@@ -60,22 +60,22 @@ void RecvClientFiles(int numtasks, unordered_map<string, TrackerData> &database)
 
 void FileRequest(unordered_map<string, TrackerData> &database, int source)
 {
-    string filename(MAX_FILENAME, '\0');
-    MPI_Recv(filename.data(), MAX_FILENAME, MPI_CHAR, source, TAG_F_REQUEST, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
+    // string filename(MAX_FILENAME, '\0');
+    // MPI_Recv(filename.data(), MAX_FILENAME, MPI_CHAR, source, TAG_F_REQUEST, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
 
-    TrackerData &tracker_data = database[filename];
-    SwarmData swarm_data;
-    swarm_data.file = tracker_data.file;
-    swarm_data.swarm_size = tracker_data.swarm.size();
-    for (int i = 0; i < tracker_data.swarm.size(); i++) {
-        swarm_data.swarm[i] = tracker_data.swarm[i];
-    }
+    // TrackerData &tracker_data = database[filename];
+    // SwarmData swarm_data;
+    // swarm_data.file = tracker_data.file;
+    // swarm_data.swarm_size = tracker_data.swarm.size();
+    // for (int i = 0; i < tracker_data.swarm.size(); i++) {
+    //     swarm_data.swarm[i] = tracker_data.swarm[i];
+    // }
 
-    MPI_Send(&swarm_data, 1, MPI_SWARM_DATA, source, TAG_F_REPLY, MPI_COMM_WORLD);
+    // MPI_Send(&swarm_data, 1, MPI_SWARM_DATA, source, TAG_F_REPLY, MPI_COMM_WORLD);
 
-    // Mark client as peer for the requested file
-    tracker_data.swarm.push_back(source);
-    tracker_data.client_types.push_back(ClientType::PEER);
+    // // Mark client as peer for the requested file
+    // tracker_data.swarm.push_back(source);
+    // tracker_data.client_types.push_back(ClientType::PEER);
 }
 
 void FileComplete(unordered_map<string, TrackerData> &database, int source)

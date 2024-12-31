@@ -29,16 +29,16 @@ int main(int argc, char *argv[]) {
 
     // New MPI datatype for tracker->client file
     {
-        int blocklengths[3] = { 1, 1, MAX_CLIENTS };
-        MPI_Datatype types[3] = { MPI_FILE_DATA, MPI_INT, MPI_INT };
+        int blocklengths[3] = { MAX_FILENAME, 1, HASH_SIZE };
+        MPI_Datatype types[3] = { MPI_CHAR, MPI_INT, MPI_CHAR };
 
         MPI_Aint displacements[3];
-        displacements[0] = offsetof(SwarmData, file);
-        displacements[1] = offsetof(SwarmData, swarm_size);
-        displacements[2] = offsetof(SwarmData, swarm);
+        displacements[0] = offsetof(DownloadSegment, filename);
+        displacements[1] = offsetof(DownloadSegment, id);
+        displacements[2] = offsetof(DownloadSegment, hash);
 
-        MPI_Type_create_struct(3, blocklengths, displacements, types, &MPI_SWARM_DATA);
-        MPI_Type_commit(&MPI_SWARM_DATA);
+        MPI_Type_create_struct(3, blocklengths, displacements, types, &MPI_SEGMENT);
+        MPI_Type_commit(&MPI_SEGMENT);
     }
 
     MPI_Comm_size(MPI_COMM_WORLD, &numtasks);
@@ -51,6 +51,6 @@ int main(int argc, char *argv[]) {
     }
 
     MPI_Type_free(&MPI_FILE_DATA);
-    MPI_Type_free(&MPI_SWARM_DATA);
+    MPI_Type_free(&MPI_SEGMENT);
     MPI_Finalize();
 }
