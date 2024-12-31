@@ -14,8 +14,9 @@
 
 #define TAG_F_REQUEST 1
 #define TAG_F_REPLY 2
-#define TAG_F_COMPLETE 3
-#define TAG_ALL_COMPLETE 4
+#define TAG_SWARM 3
+#define TAG_F_COMPLETE 4
+#define TAG_ALL_COMPLETE 5
 
 #define DIE(assertion, call_description)            \
     do {                                            \

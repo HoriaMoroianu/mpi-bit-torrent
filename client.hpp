@@ -9,9 +9,8 @@
 #include <iostream>
 #include <fstream>
 #include <vector>
-#include <queue>
-#include <unordered_set>
 #include <unordered_map>
+#include <algorithm>
 
 using namespace std;
 
@@ -24,6 +23,10 @@ void ReadInput(int rank, unordered_map<string, FileData> &owned_files,
 void SendFilesToTracker(unordered_map<string, FileData> &owned_files);
 
 void *DownloadThread(void *arg);
+FileData RequestFile(string &filename);
+vector<int> RequestSwarm(string &filename);
+void UpdateSwarm(vector<int> &local_swarm, string &filename);
+
 void *UploadThread(void *arg);
 
 #endif

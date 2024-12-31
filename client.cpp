@@ -95,25 +95,19 @@ void *DownloadThread(void *arg)
     // TODO: mutex + update realtime owned files
 
     vector<string> wanted_filenames;
+    unordered_map<string, FileData> owned_files;
 
     for (auto &filename : wanted_filenames) {
-        MPI_Send(filename.data(), filename.size(), MPI_CHAR, TRACKER_RANK, TAG_F_REQUEST, MPI_COMM_WORLD);
+        FileData file = RequestFile(filename);
+        vector<int> local_swarm;
+        int next_src = -1;
 
-        SwarmData swarm_data;
-        MPI_Recv(&swarm_data, 1, MPI_SWARM_DATA, TRACKER_RANK, TAG_F_REPLY, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
+        for (int i = 0; i < file.segment_count; i++) {
+            if (i % 10 == 0) {
+                UpdateSwarm(local_swarm, filename);
+            }
 
-        // For round robin
-        // TODO: compare function
-        priority_queue<pair<int, int>> swarm;
-        unordered_set<int> clients;
-        for (int i = 0; i < swarm_data.swarm_size; i++) {
-            swarm.push({ swarm_data.swarm[i], 0 });
-            clients.insert(swarm_data.swarm[i]);
-        }
-
-        for (int i = 0; i < swarm_data.file.segment_count; i++) {
-            auto &[source, req_count] = swarm.top();
-            swarm.pop();
+            next_src = (next_src + 1) % local_swarm.size();
 
             // MPI_send(...);
             // MPI_recv(...);
@@ -129,6 +123,41 @@ void *DownloadThread(void *arg)
     }
 
     return NULL;
+}
+
+FileData RequestFile(string &filename)
+{
+    MPI_Send(filename.data(), filename.size(), MPI_CHAR, TRACKER_RANK, TAG_F_REQUEST, MPI_COMM_WORLD);
+
+    FileData file;
+    MPI_Recv(&file, 1, MPI_FILE_DATA, TRACKER_RANK, TAG_F_REPLY, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
+    return file;
+}
+
+vector<int> RequestSwarm(string &filename)
+{
+    MPI_Send(filename.data(), filename.size(), MPI_CHAR, TRACKER_RANK, TAG_SWARM, MPI_COMM_WORLD);
+
+    MPI_Status status;
+    vector<int> swarm(MAX_CLIENTS);
+    MPI_Recv(swarm.data(), MAX_CLIENTS, MPI_INT, TRACKER_RANK, TAG_SWARM, MPI_COMM_WORLD, &status);
+
+    int swarm_size;
+    MPI_Get_count(&status, MPI_INT, &swarm_size);
+    swarm.resize(swarm_size);
+    return swarm;
+}
+
+void UpdateSwarm(vector<int> &local_swarm, string &filename)
+{
+    vector<int> tracker_swarm = RequestSwarm(filename);
+
+    for (auto &client : tracker_swarm) {
+        auto it = find(local_swarm.begin(), local_swarm.end(), client);
+        if (it == local_swarm.end()) {
+            local_swarm.push_back(client);
+        }
+    }
 }
 
 void *UploadThread(void *arg)
