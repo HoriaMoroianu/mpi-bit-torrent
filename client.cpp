@@ -52,7 +52,7 @@ void ReadInput(int rank, unordered_map<string, FileData> &owned_files,
                vector<string> &wanted_filenames)
 {
     // TODO: REMOVE WHEN USING THE CHECKER!
-    string path = "../checker/tests/test1/in" + to_string(rank) + ".txt";
+    string path = "in" + to_string(rank) + ".txt";
     ifstream fin(path);
     DIE(!fin, "Eroare la deschiderea fisierului de input");
 
@@ -242,7 +242,7 @@ void SaveFile(FileData &file, string &filename, int rank)
     ofstream fout("client" + to_string(rank) + "_" + filename);
     DIE(!fout, "Eroare la deschiderea fisierului de output");
 
-    for (auto &hash : file.segments) {
-        fout << hash << '\n';
+    for (int i = 0; i < file.segment_count; i++) {
+        fout << file.segments[i] << '\n';
     }
 }

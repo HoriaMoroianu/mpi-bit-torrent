@@ -9,9 +9,6 @@ void Tracker(int numtasks)
     RecvClientFiles(numtasks, database);
     int remaining_clients = numtasks - 1;
 
-    // TODO: remove
-    // PrintDatabase(database);
-
     bool ack = true;
     MPI_Bcast(&ack, 1, MPI_C_BOOL, TRACKER_RANK, MPI_COMM_WORLD);
 
@@ -78,9 +75,6 @@ void SendFile(unordered_map<string, TrackerData> &database, int source)
     filename.resize(strlen(filename.data()));
 
     TrackerData &tracker_data = database[filename];
-
-    cerr << "Sending file " << tracker_data.file.name << " to client " << source << '\n';
-
     MPI_Send(&tracker_data.file, 1, MPI_FILE_DATA, source, TAG_FILE, MPI_COMM_WORLD);
 
     // Mark client as peer for the requested file
