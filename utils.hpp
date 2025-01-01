@@ -12,12 +12,12 @@
 #define MAX_CHUNKS 100
 #define MAX_CLIENTS 20
 
-#define TAG_F_REQUEST 1
-#define TAG_F_REPLY 2
-#define TAG_SWARM 3
-#define TAG_SEGMENT 4
-#define TAG_F_COMPLETE 5
-#define TAG_ALL_COMPLETE 6
+#define TAG_FILE 1
+#define TAG_SWARM 2
+#define TAG_SEGMENT 3
+#define TAG_F_COMPLETE 4
+#define TAG_ALL_COMPLETE 5
+#define TAG_CLOSE 6
 
 #define DIE(assertion, call_description)            \
     do {                                            \

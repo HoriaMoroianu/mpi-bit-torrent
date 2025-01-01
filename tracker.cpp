@@ -3,32 +3,43 @@
 #include "tracker.hpp"
 #include "client.hpp"
 
-void Tracker(int numtasks, int rank)
+void Tracker(int numtasks)
 {
-    cout << "Tracker started\n";
     unordered_map<string, TrackerData> database;
     RecvClientFiles(numtasks, database);
+    int remaining_clients = numtasks - 1;
+
     // TODO: remove
-    PrintDatabase(database);
+    // PrintDatabase(database);
 
     bool ack = true;
     MPI_Bcast(&ack, 1, MPI_C_BOOL, TRACKER_RANK, MPI_COMM_WORLD);
 
     MPI_Status status;
-    while (true) {
+    while (remaining_clients > 0) {
         MPI_Probe(MPI_ANY_SOURCE, MPI_ANY_TAG, MPI_COMM_WORLD, &status);
 
         switch (status.MPI_TAG) {
-        case TAG_F_REQUEST:
-            FileRequest(database, status.MPI_SOURCE);
+        case TAG_FILE:
+            SendFile(database, status.MPI_SOURCE);
+            break;
+        case TAG_SWARM:
+            SendSwarm(database, status.MPI_SOURCE);
             break;
         case TAG_F_COMPLETE:
+            FileComplete(database, status.MPI_SOURCE);
             break;
         case TAG_ALL_COMPLETE:
+            MPI_Recv(NULL, 0, MPI_CHAR, status.MPI_SOURCE, TAG_ALL_COMPLETE, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
+            remaining_clients--;
             break;
         default:
             break;
         }
+    }
+
+    for (int i = 1; i < numtasks; i++) {
+        MPI_Send(NULL, 0, MPI_CHAR, i, TAG_CLOSE, MPI_COMM_WORLD);
     }
 }
 
@@ -58,24 +69,27 @@ void RecvClientFiles(int numtasks, unordered_map<string, TrackerData> &database)
     }
 }
 
-void FileRequest(unordered_map<string, TrackerData> &database, int source)
+// TODO: check if file exists for all these functions
+void SendFile(unordered_map<string, TrackerData> &database, int source)
 {
-    // string filename(MAX_FILENAME, '\0');
-    // MPI_Recv(filename.data(), MAX_FILENAME, MPI_CHAR, source, TAG_F_REQUEST, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
+    string filename(MAX_FILENAME, '\0');
+    MPI_Recv(filename.data(), MAX_FILENAME, MPI_CHAR, source, TAG_FILE, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
 
-    // TrackerData &tracker_data = database[filename];
-    // SwarmData swarm_data;
-    // swarm_data.file = tracker_data.file;
-    // swarm_data.swarm_size = tracker_data.swarm.size();
-    // for (int i = 0; i < tracker_data.swarm.size(); i++) {
-    //     swarm_data.swarm[i] = tracker_data.swarm[i];
-    // }
+    TrackerData &tracker_data = database[filename];
+    MPI_Send(&tracker_data.file, 1, MPI_FILE_DATA, source, TAG_FILE, MPI_COMM_WORLD);
 
-    // MPI_Send(&swarm_data, 1, MPI_SWARM_DATA, source, TAG_F_REPLY, MPI_COMM_WORLD);
+    // Mark client as peer for the requested file
+    tracker_data.swarm.push_back(source);
+    tracker_data.client_types.push_back(ClientType::PEER);
+}
 
-    // // Mark client as peer for the requested file
-    // tracker_data.swarm.push_back(source);
-    // tracker_data.client_types.push_back(ClientType::PEER);
+void SendSwarm(unordered_map<string, TrackerData> &database, int source)
+{
+    string filename(MAX_FILENAME, '\0');
+    MPI_Recv(filename.data(), MAX_FILENAME, MPI_CHAR, source, TAG_SWARM, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
+
+    TrackerData &tracker_data = database[filename];
+    MPI_Send(tracker_data.swarm.data(), tracker_data.swarm.size(), MPI_INT, source, TAG_SWARM, MPI_COMM_WORLD);
 }
 
 void FileComplete(unordered_map<string, TrackerData> &database, int source)
@@ -84,12 +98,8 @@ void FileComplete(unordered_map<string, TrackerData> &database, int source)
     MPI_Recv(filename.data(), MAX_FILENAME, MPI_CHAR, source, TAG_F_COMPLETE, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
 
     TrackerData &tracker_data = database[filename];
-    for (int i = 0; i < tracker_data.swarm.size(); i++) {
-        if (tracker_data.swarm[i] == source) {
-            tracker_data.client_types[i] = ClientType::SEED;
-            break;
-        }
-    }
+    auto it = find(tracker_data.swarm.begin(), tracker_data.swarm.end(), source);
+    tracker_data.client_types[it - tracker_data.swarm.begin()] = ClientType::SEED;
 }
 
 void PrintDatabase(unordered_map<string, TrackerData> &database)

@@ -45,7 +45,7 @@ int main(int argc, char *argv[]) {
     MPI_Comm_rank(MPI_COMM_WORLD, &rank);
 
     if (rank == TRACKER_RANK) {
-        Tracker(numtasks, rank);
+        Tracker(numtasks);
     } else {
         Client(rank);
     }

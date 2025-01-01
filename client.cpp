@@ -122,6 +122,7 @@ void *DownloadThread(void *arg)
             DownloadSegment segment;
             do {
                 next_src = (next_src + 1) % local_swarm.size();
+                // TODO: check if next_src is not the current client
                 segment = RequestSegment(file.name, i, local_swarm[next_src]);
             } while (strcmp(segment.filename, file.name));
 
@@ -145,10 +146,10 @@ void *DownloadThread(void *arg)
 
 FileData RequestFile(string &filename)
 {
-    MPI_Send(filename.data(), filename.size(), MPI_CHAR, TRACKER_RANK, TAG_F_REQUEST, MPI_COMM_WORLD);
+    MPI_Send(filename.data(), filename.size(), MPI_CHAR, TRACKER_RANK, TAG_FILE, MPI_COMM_WORLD);
 
     FileData file;
-    MPI_Recv(&file, 1, MPI_FILE_DATA, TRACKER_RANK, TAG_F_REPLY, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
+    MPI_Recv(&file, 1, MPI_FILE_DATA, TRACKER_RANK, TAG_FILE, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
     return file;
 }
 
@@ -205,8 +206,8 @@ void *UploadThread(void *arg)
         case TAG_SEGMENT:
             SendSegment(owned_files, lock, status.MPI_SOURCE);
             break;
-        case TAG_F_COMPLETE:
-            MPI_Recv(NULL, 0, MPI_CHAR, status.MPI_SOURCE, TAG_F_COMPLETE, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
+        case TAG_CLOSE:
+            MPI_Recv(NULL, 0, MPI_CHAR, status.MPI_SOURCE, TAG_CLOSE, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
             return NULL;
         default:
             break;

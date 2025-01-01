@@ -26,9 +26,10 @@ struct TrackerData {
 
 extern MPI_Datatype MPI_FILE_DATA;
 
-void Tracker(int numtasks, int rank);
+void Tracker(int numtasks);
 void RecvClientFiles(int numtasks, unordered_map<string, TrackerData> &database);
-void FileRequest(unordered_map<string, TrackerData> &database, int source);
+void SendFile(unordered_map<string, TrackerData> &database, int source);
+void SendSwarm(unordered_map<string, TrackerData> &database, int source);
 void FileComplete(unordered_map<string, TrackerData> &database, int source);
 
 void PrintDatabase(unordered_map<string, TrackerData> &database);
