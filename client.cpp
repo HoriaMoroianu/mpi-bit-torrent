@@ -137,6 +137,7 @@ void *DownloadThread(void *arg)
             pthread_mutex_unlock(&lock);
         }
         MPI_Send(filename.data(), filename.size(), MPI_CHAR, TRACKER_RANK, TAG_F_COMPLETE, MPI_COMM_WORLD);
+        // TODO: save file to disk
     }
     MPI_Send(NULL, 0, MPI_CHAR, TRACKER_RANK, TAG_ALL_COMPLETE, MPI_COMM_WORLD);
     return NULL;
@@ -196,5 +197,38 @@ void *UploadThread(void *arg)
     auto &owned_files = *args->owned_files;
     auto &lock = *args->lock;
 
+    while (true) {
+        MPI_Status status;
+        MPI_Probe(MPI_ANY_SOURCE, MPI_ANY_TAG, MPI_COMM_WORLD, &status);
+
+        switch (status.MPI_TAG) {
+        case TAG_SEGMENT:
+            SendSegment(owned_files, lock, status.MPI_SOURCE);
+            break;
+        case TAG_F_COMPLETE:
+            MPI_Recv(NULL, 0, MPI_CHAR, status.MPI_SOURCE, TAG_F_COMPLETE, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
+            return NULL;
+        default:
+            break;
+        }
+    }
     return NULL;
+}
+
+void SendSegment(unordered_map<string, FileData> &owned_files,
+                 pthread_mutex_t &lock, int peer)
+{
+    DownloadSegment segment;
+    MPI_Recv(&segment, 1, MPI_SEGMENT, peer, TAG_SEGMENT, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
+
+    pthread_mutex_lock(&lock);
+    if (owned_files.find(segment.filename) != owned_files.end()) {
+        FileData &file = owned_files[segment.filename];
+        if (segment.id >= 0 && segment.id < file.segment_count) {
+            strcpy(segment.hash, file.segments[segment.id]);
+        }
+    }
+    pthread_mutex_unlock(&lock);
+
+    MPI_Send(&segment, 1, MPI_SEGMENT, peer, TAG_SEGMENT, MPI_COMM_WORLD);
 }

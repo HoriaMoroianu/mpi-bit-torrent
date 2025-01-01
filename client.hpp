@@ -43,5 +43,7 @@ void UpdateSwarm(vector<int> &local_swarm, string &filename);
 DownloadSegment RequestSegment(char *filename, int id, int peer);
 
 void *UploadThread(void *arg);
+void SendSegment(unordered_map<string, FileData> &owned_files,
+                 pthread_mutex_t &lock, int peer);
 
 #endif
