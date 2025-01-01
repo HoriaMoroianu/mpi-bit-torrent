@@ -2,7 +2,7 @@
 
 #include "client.hpp"
 
-void Client(int numtasks, int rank)
+void Client(int rank)
 {
     unordered_map<string, FileData> owned_files;
     vector<string> wanted_filenames;
@@ -15,22 +15,37 @@ void Client(int numtasks, int rank)
         MPI_Bcast(&ack, 1, MPI_C_BOOL, TRACKER_RANK, MPI_COMM_WORLD);
     } while (!ack);
 
+    TransferFiles(owned_files, wanted_filenames);
+}
+
+void TransferFiles(unordered_map<string, FileData> &owned_files,
+                   vector<string> &wanted_filenames)
+{
     pthread_t download_thread;
     pthread_t upload_thread;
-    void *status;
     int r;
 
-    r = pthread_create(&download_thread, NULL, DownloadThread, (void *) &rank);
+    pthread_mutex_t lock;
+    r = pthread_mutex_init(&lock, NULL);
+    DIE(r, "Eroare la initializarea mutex-ului");
+
+    DownloadArgs download_args = { &owned_files, &wanted_filenames, &lock };
+    UploadArgs upload_args = { &owned_files, &lock };
+
+    r = pthread_create(&download_thread, NULL, DownloadThread, (void *) &download_args);
     DIE(r, "Eroare la crearea thread-ului de download");
 
-    r = pthread_create(&upload_thread, NULL, UploadThread, (void *) &rank);
+    r = pthread_create(&upload_thread, NULL, UploadThread, (void *) &upload_args);
     DIE(r, "Eroare la crearea thread-ului de upload");
 
-    r = pthread_join(download_thread, &status);
+    r = pthread_join(download_thread, NULL);
     DIE(r, "Eroare la asteptarea thread-ului de download");
 
-    r = pthread_join(upload_thread, &status);
+    r = pthread_join(upload_thread, NULL);
     DIE(r, "Eroare la asteptarea thread-ului de upload");
+
+    r = pthread_mutex_destroy(&lock);
+    DIE(r, "Eroare la distrugerea mutex-ului");
 }
 
 void ReadInput(int rank, unordered_map<string, FileData> &owned_files,
@@ -89,13 +104,10 @@ void SendFilesToTracker(unordered_map<string, FileData> &owned_files)
 
 void *DownloadThread(void *arg)
 {
-    int rank = *(int*) arg;
-    
-    // TODO: recv from args
-    // TODO: mutex + update realtime owned files
-
-    vector<string> wanted_filenames;
-    unordered_map<string, FileData> owned_files;
+    DownloadArgs *args = (DownloadArgs *) arg;
+    auto &wanted_filenames = *args->wanted_filenames;
+    auto &owned_files = *args->owned_files;
+    auto &lock = *args->lock;
 
     for (auto &filename : wanted_filenames) {
         FileData file = RequestFile(filename);
@@ -113,18 +125,20 @@ void *DownloadThread(void *arg)
                 segment = RequestSegment(file.name, i, local_swarm[next_src]);
             } while (strcmp(segment.filename, file.name));
 
-            // TODO: MUTEX
+            pthread_mutex_lock(&lock);
+
             FileData &owned_file = owned_files[filename];
             if (strlen(owned_file.name) == 0) {
                 strcpy(owned_file.name, file.name);
                 owned_file.segment_count = file.segment_count;
             }
             strcpy(owned_file.segments[i], segment.hash);
-            // TODO: MUTEX
+
+            pthread_mutex_unlock(&lock);
         }
-        // TODO: send f complete to tracker
+        MPI_Send(filename.data(), filename.size(), MPI_CHAR, TRACKER_RANK, TAG_F_COMPLETE, MPI_COMM_WORLD);
     }
-    // TODO: send all complete to tracker
+    MPI_Send(NULL, 0, MPI_CHAR, TRACKER_RANK, TAG_ALL_COMPLETE, MPI_COMM_WORLD);
     return NULL;
 }
 
@@ -178,7 +192,9 @@ DownloadSegment RequestSegment(char *filename, int id, int peer)
 
 void *UploadThread(void *arg)
 {
-    int rank = *(int*) arg;
-    // cout << "Upload thread " << rank << " started\n";
+    UploadArgs *args = (UploadArgs *) arg;
+    auto &owned_files = *args->owned_files;
+    auto &lock = *args->lock;
+
     return NULL;
 }

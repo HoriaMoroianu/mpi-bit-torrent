@@ -14,10 +14,24 @@
 
 using namespace std;
 
+struct DownloadArgs {
+    unordered_map<string, FileData> *owned_files;
+    vector<string> *wanted_filenames;
+    pthread_mutex_t *lock;
+};
+
+struct UploadArgs {
+    unordered_map<string, FileData> *owned_files;
+    pthread_mutex_t *lock;
+};
+
 extern MPI_Datatype MPI_FILE_DATA;
 extern MPI_Datatype MPI_SEGMENT;
 
-void Client(int numtasks, int rank);
+void Client(int rank);
+void TransferFiles(unordered_map<string, FileData> &owned_files,
+                   vector<string> &wanted_filenames);
+
 void ReadInput(int rank, unordered_map<string, FileData> &owned_files,
                vector<string> &wanted_filenames);
 void SendFilesToTracker(unordered_map<string, FileData> &owned_files);
