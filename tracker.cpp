@@ -58,7 +58,8 @@ void RecvClientFiles(int numtasks, unordered_map<string, TrackerData> &database)
 
         // Save files in database
         for (auto &file : recv_files) {
-            TrackerData &data = database[file.name];
+            string filename(file.name);
+            TrackerData &data = database[filename];
             data.swarm.push_back(i);
             data.client_types.push_back(ClientType::SEED);
 
@@ -74,8 +75,12 @@ void SendFile(unordered_map<string, TrackerData> &database, int source)
 {
     string filename(MAX_FILENAME, '\0');
     MPI_Recv(filename.data(), MAX_FILENAME, MPI_CHAR, source, TAG_FILE, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
+    filename.resize(strlen(filename.data()));
 
     TrackerData &tracker_data = database[filename];
+
+    cerr << "Sending file " << tracker_data.file.name << " to client " << source << '\n';
+
     MPI_Send(&tracker_data.file, 1, MPI_FILE_DATA, source, TAG_FILE, MPI_COMM_WORLD);
 
     // Mark client as peer for the requested file
@@ -87,6 +92,7 @@ void SendSwarm(unordered_map<string, TrackerData> &database, int source)
 {
     string filename(MAX_FILENAME, '\0');
     MPI_Recv(filename.data(), MAX_FILENAME, MPI_CHAR, source, TAG_SWARM, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
+    filename.resize(strlen(filename.data()));
 
     TrackerData &tracker_data = database[filename];
     MPI_Send(tracker_data.swarm.data(), tracker_data.swarm.size(), MPI_INT, source, TAG_SWARM, MPI_COMM_WORLD);
@@ -96,6 +102,7 @@ void FileComplete(unordered_map<string, TrackerData> &database, int source)
 {
     string filename(MAX_FILENAME, '\0');
     MPI_Recv(filename.data(), MAX_FILENAME, MPI_CHAR, source, TAG_F_COMPLETE, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
+    filename.resize(strlen(filename.data()));
 
     TrackerData &tracker_data = database[filename];
     auto it = find(tracker_data.swarm.begin(), tracker_data.swarm.end(), source);

@@ -18,6 +18,7 @@ struct DownloadArgs {
     unordered_map<string, FileData> *owned_files;
     vector<string> *wanted_filenames;
     pthread_mutex_t *lock;
+    int rank;
 };
 
 struct UploadArgs {
@@ -30,7 +31,7 @@ extern MPI_Datatype MPI_SEGMENT;
 
 void Client(int rank);
 void TransferFiles(unordered_map<string, FileData> &owned_files,
-                   vector<string> &wanted_filenames);
+                   vector<string> &wanted_filenames, int rank);
 
 void ReadInput(int rank, unordered_map<string, FileData> &owned_files,
                vector<string> &wanted_filenames);
@@ -45,5 +46,7 @@ DownloadSegment RequestSegment(char *filename, int id, int peer);
 void *UploadThread(void *arg);
 void SendSegment(unordered_map<string, FileData> &owned_files,
                  pthread_mutex_t &lock, int peer);
+
+void SaveFile(FileData &file, string &filename, int rank);
 
 #endif

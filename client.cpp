@@ -15,11 +15,11 @@ void Client(int rank)
         MPI_Bcast(&ack, 1, MPI_C_BOOL, TRACKER_RANK, MPI_COMM_WORLD);
     } while (!ack);
 
-    TransferFiles(owned_files, wanted_filenames);
+    TransferFiles(owned_files, wanted_filenames, rank);
 }
 
 void TransferFiles(unordered_map<string, FileData> &owned_files,
-                   vector<string> &wanted_filenames)
+                   vector<string> &wanted_filenames, int rank)
 {
     pthread_t download_thread;
     pthread_t upload_thread;
@@ -29,7 +29,7 @@ void TransferFiles(unordered_map<string, FileData> &owned_files,
     r = pthread_mutex_init(&lock, NULL);
     DIE(r, "Eroare la initializarea mutex-ului");
 
-    DownloadArgs download_args = { &owned_files, &wanted_filenames, &lock };
+    DownloadArgs download_args = { &owned_files, &wanted_filenames, &lock, rank };
     UploadArgs upload_args = { &owned_files, &lock };
 
     r = pthread_create(&download_thread, NULL, DownloadThread, (void *) &download_args);
@@ -122,7 +122,9 @@ void *DownloadThread(void *arg)
             DownloadSegment segment;
             do {
                 next_src = (next_src + 1) % local_swarm.size();
-                // TODO: check if next_src is not the current client
+                if (local_swarm[next_src] == args->rank) {
+                    continue;
+                }
                 segment = RequestSegment(file.name, i, local_swarm[next_src]);
             } while (strcmp(segment.filename, file.name));
 
@@ -139,6 +141,7 @@ void *DownloadThread(void *arg)
         }
         MPI_Send(filename.data(), filename.size(), MPI_CHAR, TRACKER_RANK, TAG_F_COMPLETE, MPI_COMM_WORLD);
         // TODO: save file to disk
+        SaveFile(file, filename, args->rank);
     }
     MPI_Send(NULL, 0, MPI_CHAR, TRACKER_RANK, TAG_ALL_COMPLETE, MPI_COMM_WORLD);
     return NULL;
@@ -232,4 +235,14 @@ void SendSegment(unordered_map<string, FileData> &owned_files,
     pthread_mutex_unlock(&lock);
 
     MPI_Send(&segment, 1, MPI_SEGMENT, peer, TAG_SEGMENT, MPI_COMM_WORLD);
+}
+
+void SaveFile(FileData &file, string &filename, int rank)
+{
+    ofstream fout("client" + to_string(rank) + "_" + filename);
+    DIE(!fout, "Eroare la deschiderea fisierului de output");
+
+    for (auto &hash : file.segments) {
+        fout << hash << '\n';
+    }
 }
