@@ -52,8 +52,8 @@ void ReadInput(int rank, unordered_map<string, FileData> &owned_files,
                vector<string> &wanted_filenames)
 {
     // TODO: REMOVE WHEN USING THE CHECKER!
-    // string path = "in" + to_string(rank) + ".txt";
-    string path = "../checker/tests/test1/in" + to_string(rank) + ".txt";
+    string path = "in" + to_string(rank) + ".txt";
+    // string path = "../checker/tests/test1/in" + to_string(rank) + ".txt";
     ifstream fin(path);
     DIE(!fin, "Eroare la deschiderea fisierului de input");
 
@@ -117,14 +117,12 @@ void *DownloadThread(void *arg)
                 UpdateSwarm(swarm, filename);
             }
 
-            DownloadSegment segment;
             do {
                 next_src = (next_src + 1) % swarm.size();
                 if (swarm[next_src] == args->rank) {
-                    continue;
+                    next_src = (next_src + 1) % swarm.size();
                 }
-                segment = RequestSegment(file.name, i, swarm[next_src]);
-            } while (strlen(segment.hash) == 0);
+            } while (RequestSegment(file.name, i, file.segments[i], swarm[next_src]) == false);
 
             pthread_mutex_lock(args->lock);
 
@@ -133,12 +131,13 @@ void *DownloadThread(void *arg)
                 strcpy(owned_file.name, file.name);
                 owned_file.segment_count = file.segment_count;
             }
-            strcpy(owned_file.segments[i], segment.hash);
+            strcpy(owned_file.segments[i], file.segments[i]);
 
             pthread_mutex_unlock(args->lock);
         }
+
         MPI_Send(filename.data(), filename.size(), MPI_CHAR, TRACKER_RANK, TAG_F_COMPLETE, MPI_COMM_WORLD);
-        SaveFile(file, filename, args->rank);
+        SaveFile((*args->owned_files)[filename], filename, args->rank);
     }
     MPI_Send(NULL, 0, MPI_CHAR, TRACKER_RANK, TAG_ALL_COMPLETE, MPI_COMM_WORLD);
     return NULL;
@@ -179,17 +178,19 @@ void UpdateSwarm(vector<int> &local_swarm, string &filename)
     }
 }
 
-DownloadSegment RequestSegment(char *filename, int id, int peer)
+bool RequestSegment(char *filename, int id, char *hash, int peer)
 {
     DownloadSegment segment;
     memset(segment.filename, '\0', MAX_FILENAME);
-    memset(segment.hash, '\0', HASH_SIZE);
     strcpy(segment.filename, filename);
     segment.id = id;
+    strcpy(segment.hash, hash);
 
     MPI_Send(&segment, 1, MPI_SEGMENT, peer, TAG_SEGMENT, MPI_COMM_WORLD);
-    MPI_Recv(&segment, 1, MPI_SEGMENT, peer, TAG_SEGMENT, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
-    return segment;
+
+    bool ack = false;
+    MPI_Recv(&ack, 1, MPI_C_BOOL, peer, TAG_SEGMENT_REPLY, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
+    return ack;
 }
 
 void *UploadThread(void *arg)
@@ -217,24 +218,22 @@ void *UploadThread(void *arg)
 void SendSegment(UploadArgs *args, int peer)
 {
     DownloadSegment segment;
-    MPI_Status status;
-    MPI_Recv(&segment, 1, MPI_SEGMENT, peer, TAG_SEGMENT, MPI_COMM_WORLD, &status);
+    MPI_Recv(&segment, 1, MPI_SEGMENT, peer, TAG_SEGMENT, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
 
     string filename(segment.filename);
     filename.resize(strlen(segment.filename));
 
     unordered_map<string, FileData> &owned_files = *args->owned_files;
-    pthread_mutex_lock(args->lock);
+    bool ack = false;
 
+    pthread_mutex_lock(args->lock);
     if (owned_files.find(filename) != owned_files.end()) {
         FileData &file = owned_files[filename];
-        if (segment.id >= 0 && segment.id < file.segment_count) {
-            strcpy(segment.hash, file.segments[segment.id]);
-        }
+        ack = (strcmp(file.segments[segment.id], segment.hash) == 0);
     }
     pthread_mutex_unlock(args->lock);
 
-    MPI_Send(&segment, 1, MPI_SEGMENT, peer, TAG_SEGMENT, MPI_COMM_WORLD);
+    MPI_Send(&ack, 1, MPI_C_BOOL, peer, TAG_SEGMENT_REPLY, MPI_COMM_WORLD);
 }
 
 void SaveFile(FileData &file, string &filename, int rank)
