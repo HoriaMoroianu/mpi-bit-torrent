@@ -35,6 +35,8 @@ void Tracker(int numtasks)
         }
     }
 
+    cout << "All clients have completed their downloads\n";
+
     for (int i = 1; i < numtasks; i++) {
         MPI_Send(NULL, 0, MPI_CHAR, i, TAG_CLOSE, MPI_COMM_WORLD);
     }
@@ -88,8 +90,8 @@ void SendSwarm(unordered_map<string, TrackerData> &database, int source)
     MPI_Recv(filename.data(), MAX_FILENAME, MPI_CHAR, source, TAG_SWARM, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
     filename.resize(strlen(filename.data()));
 
-    TrackerData &tracker_data = database[filename];
-    MPI_Send(tracker_data.swarm.data(), tracker_data.swarm.size(), MPI_INT, source, TAG_SWARM, MPI_COMM_WORLD);
+    vector<int> &swarm = database[filename].swarm;
+    MPI_Send(swarm.data(), swarm.size(), MPI_INT, source, TAG_SWARM, MPI_COMM_WORLD);
 }
 
 void FileComplete(unordered_map<string, TrackerData> &database, int source)

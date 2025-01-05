@@ -24,6 +24,7 @@ struct DownloadArgs {
 struct UploadArgs {
     unordered_map<string, FileData> *owned_files;
     pthread_mutex_t *lock;
+    int rank;
 };
 
 extern MPI_Datatype MPI_FILE_DATA;
@@ -44,8 +45,7 @@ void UpdateSwarm(vector<int> &local_swarm, string &filename);
 DownloadSegment RequestSegment(char *filename, int id, int peer);
 
 void *UploadThread(void *arg);
-void SendSegment(unordered_map<string, FileData> &owned_files,
-                 pthread_mutex_t &lock, int peer);
+void SendSegment(UploadArgs *args, int peer);
 
 void SaveFile(FileData &file, string &filename, int rank);
 
