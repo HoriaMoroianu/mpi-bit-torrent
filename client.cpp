@@ -109,21 +109,21 @@ void *DownloadThread(void *arg)
 
     for (auto &filename : *args->wanted_filenames) {
         FileData file = RequestFile(filename);
-        vector<int> local_swarm;
+        vector<int> swarm;
         int next_src = -1;
 
         for (int i = 0; i < file.segment_count; i++) {
             if (i % 10 == 0) {
-                UpdateSwarm(local_swarm, filename);
+                UpdateSwarm(swarm, filename);
             }
 
             DownloadSegment segment;
             do {
-                next_src = (next_src + 1) % local_swarm.size();
-                if (local_swarm[next_src] == args->rank) {
+                next_src = (next_src + 1) % swarm.size();
+                if (swarm[next_src] == args->rank) {
                     continue;
                 }
-                segment = RequestSegment(file.name, i, local_swarm[next_src]);
+                segment = RequestSegment(file.name, i, swarm[next_src]);
             } while (strlen(segment.hash) == 0);
 
             pthread_mutex_lock(args->lock);
@@ -220,20 +220,18 @@ void SendSegment(UploadArgs *args, int peer)
     MPI_Status status;
     MPI_Recv(&segment, 1, MPI_SEGMENT, peer, TAG_SEGMENT, MPI_COMM_WORLD, &status);
 
-    unordered_map<std::string, FileData> *owned_files = args->owned_files;
-
     string filename(segment.filename);
     filename.resize(strlen(segment.filename));
 
+    unordered_map<string, FileData> &owned_files = *args->owned_files;
     pthread_mutex_lock(args->lock);
 
-    if ((*owned_files).find(filename) != (*owned_files).end()) {
-        FileData &file = (*owned_files)[filename];
+    if (owned_files.find(filename) != owned_files.end()) {
+        FileData &file = owned_files[filename];
         if (segment.id >= 0 && segment.id < file.segment_count) {
             strcpy(segment.hash, file.segments[segment.id]);
         }
     }
-
     pthread_mutex_unlock(args->lock);
 
     MPI_Send(&segment, 1, MPI_SEGMENT, peer, TAG_SEGMENT, MPI_COMM_WORLD);
