@@ -12,4 +12,7 @@ using namespace std;
 MPI_Datatype MPI_FILE_DATA;
 MPI_Datatype MPI_SEGMENT;
 
+void MPI_Create_File_Data(void);
+void MPI_Create_Segment(void);
+
 #endif
