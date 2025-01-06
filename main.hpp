@@ -4,7 +4,6 @@
 #define __MAIN_HPP__
 
 #include <mpi.h>
-#include <pthread.h>
 #include <iostream>
 
 using namespace std;

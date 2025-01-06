@@ -13,10 +13,10 @@ int main(int argc, char *argv[]) {
     DIE(provided < MPI_THREAD_MULTIPLE,
         "MPI nu are suport pentru multi-threading");
 
-    // New MPI datatype for client->tracker input files
+    // New MPI datatype for client<->tracker input files data
     MPI_Create_File_Data();
 
-    // New MPI datatype for tracker->client file
+    // New MPI datatype for client<->client segment transfer
     MPI_Create_Segment();
 
     MPI_Comm_size(MPI_COMM_WORLD, &numtasks);
