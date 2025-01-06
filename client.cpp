@@ -99,7 +99,8 @@ void SendFilesToTracker(unordered_map<string, FileData> &owned_files)
     for (auto &[_, file] : owned_files) {
         client_data.push_back(file);
     }
-    MPI_Send(client_data.data(), client_data.size(), MPI_FILE_DATA, TRACKER_RANK, 0, MPI_COMM_WORLD);
+    MPI_Send(client_data.data(), client_data.size(), MPI_FILE_DATA,
+             TRACKER_RANK, 0, MPI_COMM_WORLD);
 }
 
 void *DownloadThread(void *arg)
@@ -144,22 +145,27 @@ void *DownloadThread(void *arg)
 
 FileData RequestFile(string &filename)
 {
-    MPI_Send(filename.data(), filename.size(), MPI_CHAR, TRACKER_RANK, TAG_FILE, MPI_COMM_WORLD);
+    MPI_Send(filename.data(), filename.size(), MPI_CHAR,
+             TRACKER_RANK, TAG_FILE, MPI_COMM_WORLD);
 
     FileData file;
-    MPI_Recv(&file, 1, MPI_FILE_DATA, TRACKER_RANK, TAG_FILE, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
+    MPI_Recv(&file, 1, MPI_FILE_DATA,
+             TRACKER_RANK, TAG_FILE, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
     return file;
 }
 
 vector<int> RequestSwarm(string &filename)
 {
-    MPI_Send(filename.data(), filename.size(), MPI_CHAR, TRACKER_RANK, TAG_SWARM, MPI_COMM_WORLD);
+    MPI_Send(filename.data(), filename.size(), MPI_CHAR,
+             TRACKER_RANK, TAG_SWARM, MPI_COMM_WORLD);
+
+    vector<int> swarm(MAX_CLIENTS);
+    int swarm_size = MAX_CLIENTS;
 
     MPI_Status status;
-    vector<int> swarm(MAX_CLIENTS);
-    MPI_Recv(swarm.data(), MAX_CLIENTS, MPI_INT, TRACKER_RANK, TAG_SWARM, MPI_COMM_WORLD, &status);
+    MPI_Recv(swarm.data(), MAX_CLIENTS, MPI_INT,
+             TRACKER_RANK, TAG_SWARM, MPI_COMM_WORLD, &status);
 
-    int swarm_size;
     MPI_Get_count(&status, MPI_INT, &swarm_size);
     swarm.resize(swarm_size);
     return swarm;
@@ -168,7 +174,7 @@ vector<int> RequestSwarm(string &filename)
 void UpdateSwarm(vector<int> &local_swarm, string &filename)
 {
     vector<int> tracker_swarm = RequestSwarm(filename);
-
+    // Add new clients to local swarm
     for (auto &client : tracker_swarm) {
         auto it = find(local_swarm.begin(), local_swarm.end(), client);
         if (it == local_swarm.end()) {
@@ -180,15 +186,15 @@ void UpdateSwarm(vector<int> &local_swarm, string &filename)
 bool RequestSegment(char *filename, int id, char *hash, int peer)
 {
     DownloadSegment segment;
-    memset(segment.filename, '\0', MAX_FILENAME);
     strcpy(segment.filename, filename);
     segment.id = id;
     strcpy(segment.hash, hash);
 
-    MPI_Send(&segment, 1, MPI_SEGMENT, peer, TAG_SEGMENT, MPI_COMM_WORLD);
+    MPI_Send(&segment, 1, MPI_SEGMENT, peer, TAG_SEG_REQ, MPI_COMM_WORLD);
 
     bool ack = false;
-    MPI_Recv(&ack, 1, MPI_C_BOOL, peer, TAG_SEGMENT_REPLY, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
+    MPI_Recv(&ack, 1, MPI_C_BOOL, peer,
+             TAG_SEG_REPLY, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
     return ack;
 }
 
@@ -201,7 +207,7 @@ void *UploadThread(void *arg)
         MPI_Probe(MPI_ANY_SOURCE, MPI_ANY_TAG, MPI_COMM_WORLD, &status);
 
         switch (status.MPI_TAG) {
-        case TAG_SEGMENT:
+        case TAG_SEG_REQ:
             SendSegment(args, status.MPI_SOURCE);
             break;
         case TAG_CLOSE:
@@ -217,7 +223,7 @@ void *UploadThread(void *arg)
 void SendSegment(UploadArgs *args, int peer)
 {
     DownloadSegment segment;
-    MPI_Recv(&segment, 1, MPI_SEGMENT, peer, TAG_SEGMENT, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
+    MPI_Recv(&segment, 1, MPI_SEGMENT, peer, TAG_SEG_REQ, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
 
     string filename(segment.filename);
     filename.resize(strlen(segment.filename));
@@ -232,7 +238,7 @@ void SendSegment(UploadArgs *args, int peer)
     }
     pthread_mutex_unlock(args->lock);
 
-    MPI_Send(&ack, 1, MPI_C_BOOL, peer, TAG_SEGMENT_REPLY, MPI_COMM_WORLD);
+    MPI_Send(&ack, 1, MPI_C_BOOL, peer, TAG_SEG_REPLY, MPI_COMM_WORLD);
 }
 
 void SaveFile(FileData &file, string &filename, int rank)
