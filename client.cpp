@@ -117,28 +117,34 @@ void *DownloadThread(void *arg)
                 UpdateSwarm(swarm, filename);
             }
 
+            // Find a seed/peer that has the segment
             do {
                 next_src = (next_src + 1) % swarm.size();
                 if (swarm[next_src] == args->rank) {
                     next_src = (next_src + 1) % swarm.size();
                 }
-            } while (RequestSegment(file.name, i, file.segments[i], swarm[next_src]) == false);
+            } while (!RequestSegment(swarm[next_src],
+                                     file.name, i, file.segments[i]));
 
             pthread_mutex_lock(args->lock);
-
             FileData &owned_file = (*args->owned_files)[filename];
+            // Save the file if it's the first segment received
             if (strlen(owned_file.name) == 0) {
                 strcpy(owned_file.name, file.name);
                 owned_file.segment_count = file.segment_count;
             }
+            // Copy the segment hash
             strcpy(owned_file.segments[i], file.segments[i]);
-
             pthread_mutex_unlock(args->lock);
         }
 
-        MPI_Send(filename.data(), filename.size(), MPI_CHAR, TRACKER_RANK, TAG_F_COMPLETE, MPI_COMM_WORLD);
+        // Notify tracker that the file is complete
+        MPI_Send(filename.data(), filename.size(), MPI_CHAR,
+                 TRACKER_RANK, TAG_F_COMPLETE, MPI_COMM_WORLD);
         SaveFile((*args->owned_files)[filename], filename, args->rank);
     }
+
+    // Notify tracker that all files are complete
     MPI_Send(NULL, 0, MPI_CHAR, TRACKER_RANK, TAG_ALL_COMPLETE, MPI_COMM_WORLD);
     return NULL;
 }
@@ -183,7 +189,7 @@ void UpdateSwarm(vector<int> &local_swarm, string &filename)
     }
 }
 
-bool RequestSegment(char *filename, int id, char *hash, int peer)
+bool RequestSegment(int peer, char *filename, int id, char *hash)
 {
     DownloadSegment segment;
     strcpy(segment.filename, filename);

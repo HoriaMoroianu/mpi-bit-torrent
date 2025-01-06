@@ -42,7 +42,7 @@ void *DownloadThread(void *arg);
 FileData RequestFile(string &filename);
 vector<int> RequestSwarm(string &filename);
 void UpdateSwarm(vector<int> &local_swarm, string &filename);
-bool RequestSegment(char *filename, int id, char *hash, int peer);
+bool RequestSegment(int peer, char *filename, int id, char *hash);
 
 void *UploadThread(void *arg);
 void SendSegment(UploadArgs *args, int peer);
