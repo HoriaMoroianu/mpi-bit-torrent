@@ -51,8 +51,6 @@ void TransferFiles(unordered_map<string, FileData> &owned_files,
 void ReadInput(int rank, unordered_map<string, FileData> &owned_files,
                vector<string> &wanted_filenames)
 {
-    // TODO: REMOVE WHEN USING THE CHECKER!
-    // string path = "../checker/tests/test1/in" + to_string(rank) + ".txt";
     ifstream fin("in" + to_string(rank) + ".txt");
     DIE(!fin, "Eroare la deschiderea fisierului de input");
 
@@ -208,8 +206,8 @@ void *UploadThread(void *arg)
 {
     UploadArgs *args = (UploadArgs *) arg;
 
+    MPI_Status status;
     while (true) {
-        MPI_Status status;
         MPI_Probe(MPI_ANY_SOURCE, MPI_ANY_TAG, MPI_COMM_WORLD, &status);
 
         switch (status.MPI_TAG) {
@@ -217,7 +215,8 @@ void *UploadThread(void *arg)
             SendSegment(args, status.MPI_SOURCE);
             break;
         case TAG_CLOSE:
-            MPI_Recv(NULL, 0, MPI_CHAR, status.MPI_SOURCE, TAG_CLOSE, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
+            MPI_Recv(NULL, 0, MPI_CHAR, status.MPI_SOURCE,
+                     TAG_CLOSE, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
             return NULL;
         default:
             break;
@@ -229,12 +228,15 @@ void *UploadThread(void *arg)
 void SendSegment(UploadArgs *args, int peer)
 {
     DownloadSegment segment;
-    MPI_Recv(&segment, 1, MPI_SEGMENT, peer, TAG_SEG_REQ, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
+    MPI_Recv(&segment, 1, MPI_SEGMENT, peer,
+             TAG_SEG_REQ, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
 
+    // Convert char array to string
     string filename(segment.filename);
     filename.resize(strlen(segment.filename));
 
-    unordered_map<string, FileData> &owned_files = *args->owned_files;
+    // Check if the segment hash is correct
+    auto &owned_files = *args->owned_files;
     bool ack = false;
 
     pthread_mutex_lock(args->lock);
