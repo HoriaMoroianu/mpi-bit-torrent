@@ -7,12 +7,13 @@ void Tracker(int numtasks)
 {
     unordered_map<string, TrackerData> database;
     RecvClientFiles(numtasks, database);
-    int remaining_clients = numtasks - 1;
 
-    bool ack = true;
-    MPI_Bcast(&ack, 1, MPI_C_BOOL, TRACKER_RANK, MPI_COMM_WORLD);
+    // Signal clients to start the transfer
+    MPI_Bcast(NULL, 0, MPI_CHAR, TRACKER_RANK, MPI_COMM_WORLD);
 
     MPI_Status status;
+    int remaining_clients = numtasks - 1;
+
     while (remaining_clients > 0) {
         MPI_Probe(MPI_ANY_SOURCE, MPI_ANY_TAG, MPI_COMM_WORLD, &status);
 
@@ -34,8 +35,6 @@ void Tracker(int numtasks)
             break;
         }
     }
-
-    cout << "All clients have completed their downloads\n";
 
     for (int i = 1; i < numtasks; i++) {
         MPI_Send(NULL, 0, MPI_CHAR, i, TAG_CLOSE, MPI_COMM_WORLD);

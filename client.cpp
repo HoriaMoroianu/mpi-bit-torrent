@@ -10,11 +10,8 @@ void Client(int rank)
     ReadInput(rank, owned_files, wanted_filenames);
     SendFilesToTracker(owned_files);
 
-    bool ack = false;
-    do {
-        MPI_Bcast(&ack, 1, MPI_C_BOOL, TRACKER_RANK, MPI_COMM_WORLD);
-    } while (!ack);
-
+    // Wait for tracker to start the transfer
+    MPI_Bcast(NULL, 0, MPI_CHAR, TRACKER_RANK, MPI_COMM_WORLD);
     TransferFiles(owned_files, wanted_filenames, rank);
 }
 
