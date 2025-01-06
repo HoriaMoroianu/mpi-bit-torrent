@@ -22,19 +22,22 @@ void TransferFiles(unordered_map<string, FileData> &owned_files,
     pthread_t upload_thread;
     int r;
 
+    // Lock for thread synchronization
     pthread_mutex_t lock;
     r = pthread_mutex_init(&lock, NULL);
     DIE(r, "Eroare la initializarea mutex-ului");
 
-    DownloadArgs download_args = { &owned_files, &wanted_filenames, &lock, rank };
-    UploadArgs upload_args = { &owned_files, &lock, rank };
+    DownloadArgs download_args{ &owned_files, &wanted_filenames, &lock, rank };
+    UploadArgs upload_args{ &owned_files, &lock, rank };
 
-    r = pthread_create(&download_thread, NULL, DownloadThread, (void *) &download_args);
+    // Start download and upload threads
+    r = pthread_create(&download_thread, NULL, DownloadThread, &download_args);
     DIE(r, "Eroare la crearea thread-ului de download");
 
-    r = pthread_create(&upload_thread, NULL, UploadThread, (void *) &upload_args);
+    r = pthread_create(&upload_thread, NULL, UploadThread, &upload_args);
     DIE(r, "Eroare la crearea thread-ului de upload");
 
+    // Wait for threads to finish
     r = pthread_join(download_thread, NULL);
     DIE(r, "Eroare la asteptarea thread-ului de download");
 
@@ -49,29 +52,28 @@ void ReadInput(int rank, unordered_map<string, FileData> &owned_files,
                vector<string> &wanted_filenames)
 {
     // TODO: REMOVE WHEN USING THE CHECKER!
-    string path = "in" + to_string(rank) + ".txt";
     // string path = "../checker/tests/test1/in" + to_string(rank) + ".txt";
-    ifstream fin(path);
+    ifstream fin("in" + to_string(rank) + ".txt");
     DIE(!fin, "Eroare la deschiderea fisierului de input");
 
     // Read owned files data
     int file_count;
-    fin >> file_count;
-
-    string filename;
     int segment_count;
+    string filename;
+    string hash;
+
+    fin >> file_count;
     for (int i = 0; i < file_count; i++) {
         fin >> filename;
-        fin >> segment_count;
 
         FileData &file = owned_files[filename];
-        file.segment_count = segment_count;
-
         memset(file.name, '\0', MAX_FILENAME);
         strncpy(file.name, filename.data(),
                 min(filename.size(), (size_t)MAX_FILENAME - 1));
 
-        string hash;
+        fin >> segment_count;
+        file.segment_count = segment_count;
+
         for (int j = 0; j < segment_count; j++) {
             fin >> hash;
             memset(file.segments[j], '\0', HASH_SIZE);
