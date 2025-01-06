@@ -1,6 +1,6 @@
 CXX = mpic++
 
-CXXFLAGS = -Wall -Wextra -pthread
+CXXFLAGS = -Wall -pthread
 
 TARGET = tema2
 
@@ -15,9 +15,6 @@ $(TARGET): $(OBJS)
 
 %.o: %.cpp
 	$(CXX) $(CXXFLAGS) -c $< -o $@
-
-run: $(TARGET)
-	mpirun -np 4 ./$(TARGET)
 
 clean:
 	rm -f $(TARGET) $(OBJS)
