@@ -1,0 +1,69 @@
+                        Tema #2 Protocolul BitTorrent
+
+1. Structura temei:
+
+Am decis sa impart codul din schelet in mai multe fisiere pentru a evidentia ce
+face fiecare participant in protocolul BitTorrent:
+
+- main.cpp: se ocupa de crearea unor noi tipuri de date MPI si desemnarea
+            rolului de tracker sau client;
+- tracker.cpp: contine logica pentru tracker;
+- client.cpp: contine logica pentru clienti;
+- utils.hpp: contine structurile pentru noile tipuri de date si macro-uri
+             utilizate in toate fisierele
+
+Structura 'FileData' contine informatii despre un fisier (nume, nr. de segmente,
+lista de hash-uri), are un echivalent intr-un nou tip de date MPI si este
+folosita pentru transferul mai usor de fisiere dintre tracker si clienti.
+
+Structura 'DownloadSegment' contine informatii despre un segment (nume fisier
+din care provine, id, hash), are un echivalent intr-un nou tip de date MPI si
+este folosita pentru validarea segmentelor intre clienti si seeds/peers.
+
+2. Implementare:
+
+Tracker
+    Tracker-ul primeste toate fisierele de la clienti si le pastreaza intr-un
+registru pentru a tine evidenta swarm-urilor, apoi anunta ptrintr-un broadcast
+toti clientii ca pot incepe transferul. In continuare, pentru a putea determina
+ce actiune trebuie luata, am folosit MPI_Probe care verifica tagul viitorului
+mesaj, fara a-l "consuma". In functie de acest tag, tracker-ul realizeaza una
+dintre sarcinile prezentate in enuntul temei. Dupa ce marcheaza ca toti clientii
+au terminat de descarcat fisierele, mai trimite la final un mesaj de semnalizare
+pentru a inchide executia programului.
+
+Clienti
+    Un client citeste fisierele proprii si le trimite tracker-ului, dupa care
+asteapta semnalul ca poate incepe transferul. Am decis sa pastrez informatiile
+despre fisiere sub forma de 'FileData' (primitive) si nu tipuri specifice c++
+pentru a trimite cu usurinta mesaje fara a mai fi nevoie de conversii intre
+tipurile de date. Totusi, pentru a fi gasite rapid, am pus informatiile despre
+fisiere intr-un hashmap ce are drept cheie numele unui fisier.
+
+    Thread-ul de download parcurge lista cu numele fisierelor dorite si urmeaza
+pasii descrisi in enuntul temei. Segmentele sunt cerute in ordine iar pentru
+eficienta am folosit un algoritm round-robin. Exista o variabila care pastreaza
+indicele ultimului peer/seed interogat din swarm. La fiecare cerere de segment,
+aceasta variabila este incrementata iar daca ajunge la finalul listei, va pleca
+din nou de la indecele 0. Pentru confirmarea unui hash, clientul trimite unui
+peer/seed un 'DownloadSegment' si asteapta inapoi un mesaj true/false. La
+primirea unui raspuns afirmativ, clientul salveaza hash-ul in fisierul propriu
+si trece la urmatorul segment. Acesti pasi continua pana se termina de verificat
+toate segmentele, dupa care se anunta tracker-ul, fisierul este salvat pe disk
+si se trece la urmatorul fisier dorit. La terminarea listei, clientul anunta
+tracker-ul si inchide thread-ul de download.
+
+    Thread-ul de upload poate primi doua tipuri de mesaje, de verificare a unui
+segment sau de inchidere a programului. Pentru a face aceasta distinctie, am
+folosit din nou MPI_Probe. La o cerere de segment, thread-ul va verifica hash-ul
+primit din mesaj cu cel din fisierul propriu si va trimite inapoi un mesaj true
+daca acestea se potrivesc si false in caz contrar.
+
+    Am folosit un mutex pentru a garanta accesul exclusiv la informatiile despre
+fisiere deoarece ambele thread-uri folosesc acel hashmap si se poate intampla ca
+un peer/seed sa primeasca o cere de confiramare a unui segment pe care el, in
+acel moment, vrea sa il descarce de la altcineva. De asemenea, pentru a face
+distinctia intre mesaje, am definit in utils.hpp mai multe tag-uri, fiecare
+desemnat unui anumit tip de mesaj.
+
+-- Horia-Valentin Moroianu 334CA
